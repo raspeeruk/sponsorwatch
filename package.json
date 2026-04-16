@@ -1,0 +1,28 @@
+{
+  "name": "sponsorwatch",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "prebuild": "tsx scripts/prebuild.ts",
+    "dev": "next dev",
+    "build": "npm run prebuild && next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^16.2.4",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "resend": "^4.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.14",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

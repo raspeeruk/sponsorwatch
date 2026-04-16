@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: #f4f1ea;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.06 0 0 0 0 0.1 0 0 0 0.03 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+    background-size: 200px 200px;
+    color: #0B0E1A;
+  }
+  body {
+    font-family: "Public Sans", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  h1, h2, h3, h4 {
+    font-family: "Fraunces", serif;
+    letter-spacing: -0.01em;
+  }
+  a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    color: inherit;
+  }
+  a:hover {
+    color: #1B4332;
+  }
+  ::selection {
+    background: #1B4332;
+    color: #F4F1EA;
+  }
+}
+
+@layer components {
+  .rule {
+    border-top: 1px solid #0B0E1A;
+  }
+  .hairline {
+    border: 1px solid #0B0E1A;
+  }
+  .mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    letter-spacing: 0.02em;
+  }
+  .data-label {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    color: #0B0E1A;
+  }
+  .stat-digit {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 48px;
+    line-height: 1;
+    font-weight: 400;
+  }
+  .container-main {
+    max-width: 1120px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .btn-primary {
+    background: #1B4332;
+    color: #F4F1EA;
+    padding: 12px 20px;
+    font-family: "Public Sans", sans-serif;
+    font-weight: 500;
+    display: inline-block;
+    text-decoration: none;
+  }
+  .btn-primary:hover {
+    background: #0B0E1A;
+    color: #F4F1EA;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 0;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .status-A { background: #3E4D2F; }
+  .status-B { background: #C8102E; }
+  .status-Provisional { background: #8B6B2C; }
+  .status-Unknown { background: #0B0E1A; opacity: 0.3; }
+}
