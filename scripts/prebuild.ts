@@ -33,7 +33,7 @@ const LOCAL_PIPELINE =
   "/Users/andrewspeer/Documents/GitHub/certifyd-data-pipeline";
 const REMOTE_BASE =
   process.env.SPONSORS_REMOTE_BASE ||
-  "https://raw.githubusercontent.com/Think-Certifyd-Ops/certifyd-data-pipeline/main";
+  "https://raw.githubusercontent.com/raspeeruk/certifyd-data-pipeline/main";
 
 const STATIC_DIR = path.resolve(__dirname, "..", ".data", "static");
 
@@ -183,10 +183,14 @@ async function readLatestCsv(): Promise<{ date: string; csv: string }> {
     return { date: dateStamp, csv: buf };
   }
 
-  // 2. Remote fallback
+  // 2. Remote fallback (private repo — needs GITHUB_TOKEN)
   const url = `${REMOTE_BASE}/data/sponsors/latest.csv`;
   console.log(`[prebuild] Fetching ${url}`);
-  const res = await fetch(url);
+  const headers: Record<string, string> = {};
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+  }
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     throw new Error(`Failed to fetch latest.csv: ${res.status}`);
   }

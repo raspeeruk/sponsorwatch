@@ -7,3 +7,6 @@ out/
 .data/
 public/search-index.json
 *.log
+
+# Local Netlify folder
+.netlify
