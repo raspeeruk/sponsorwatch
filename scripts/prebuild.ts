@@ -209,22 +209,55 @@ async function readLatestCsv(): Promise<{ date: string; csv: string }> {
 }
 
 async function readAllDiffs(): Promise<Array<{ date: string; diff: any }>> {
+  // 1. Try local filesystem
   const diffsDir = path.join(LOCAL_PIPELINE, "data", "sponsors", "diffs");
-  if (!fs.existsSync(diffsDir)) {
-    console.log(`[prebuild] No diffs dir — skipping change history`);
+  if (fs.existsSync(diffsDir)) {
+    const files = fs
+      .readdirSync(diffsDir)
+      .filter((f) => f.endsWith(".json"))
+      .sort();
+    if (files.length > 0) {
+      const out: Array<{ date: string; diff: any }> = [];
+      for (const f of files) {
+        const raw = fs.readFileSync(path.join(diffsDir, f), "utf8");
+        try {
+          out.push({ date: f.replace(".json", ""), diff: JSON.parse(raw) });
+        } catch {
+          console.warn(`[prebuild] skipped bad diff ${f}`);
+        }
+      }
+      console.log(`[prebuild] loaded ${out.length} diffs from local`);
+      return out;
+    }
+  }
+
+  // 2. Remote fallback — fetch diff listing from GitHub API
+  const apiUrl = "https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/diffs";
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "sponsorwatch-prebuild",
+  };
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+  }
+  const listRes = await fetch(apiUrl, { headers });
+  if (!listRes.ok) {
+    console.log(`[prebuild] No remote diffs (${listRes.status}) — skipping change history`);
     return [];
   }
-  const files = fs
-    .readdirSync(diffsDir)
-    .filter((f) => f.endsWith(".json"))
-    .sort();
+  const listing = (await listRes.json()) as Array<{ name: string; download_url: string }>;
+  const jsonFiles = listing.filter((f) => f.name.endsWith(".json")).sort((a, b) => a.name.localeCompare(b.name));
+  console.log(`[prebuild] fetching ${jsonFiles.length} diffs from GitHub`);
+
   const out: Array<{ date: string; diff: any }> = [];
-  for (const f of files) {
-    const raw = fs.readFileSync(path.join(diffsDir, f), "utf8");
+  for (const f of jsonFiles) {
     try {
-      out.push({ date: f.replace(".json", ""), diff: JSON.parse(raw) });
+      const res = await fetch(f.download_url);
+      if (res.ok) {
+        out.push({ date: f.name.replace(".json", ""), diff: await res.json() });
+      }
     } catch {
-      console.warn(`[prebuild] skipped bad diff ${f}`);
+      console.warn(`[prebuild] skipped bad remote diff ${f.name}`);
     }
   }
   return out;
