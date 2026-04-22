@@ -4,7 +4,6 @@
  * No network. No database. Just fs reads into memory.
  */
 
-import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 

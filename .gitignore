@@ -10,3 +10,4 @@ public/search-index.json
 
 # Local Netlify folder
 .netlify
+tsconfig.tsbuildinfo

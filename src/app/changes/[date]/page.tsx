@@ -12,7 +12,8 @@ type Diff = {
 };
 
 export async function generateStaticParams() {
-  return getChangesFeed().map((d) => ({ date: d.date }));
+  const feed = getChangesFeed();
+  return feed.map((d) => ({ date: d.date }));
 }
 
 export async function generateMetadata(

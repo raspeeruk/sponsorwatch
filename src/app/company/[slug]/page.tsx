@@ -3,15 +3,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getCompany, getCompanyIndex, getStats } from "@/lib/data";
 
-// Generate static params for the top 5,000 companies; the rest are built on
-// demand by Netlify (ISR) and cached for 24h. Keeps build time bounded while
-// still letting Google crawl every page via the sitemap.
 export async function generateStaticParams() {
-  const top = getCompanyIndex().slice(0, 5000);
-  return top.map((c) => ({ slug: c.slug }));
+  return getCompanyIndex().slice(0, 5000).map((c) => ({ slug: c.slug }));
 }
 
-export const revalidate = 86400; // 1 day
+export const revalidate = 86400;
 export const dynamicParams = true;
 
 export async function generateMetadata(
