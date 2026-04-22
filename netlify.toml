@@ -4,3 +4,15 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[functions]
+  included_files = [
+    ".data/static/companies/lookup.json",
+    ".data/static/companies/index.json",
+    ".data/static/towns/lookup.json",
+    ".data/static/towns/index.json",
+    ".data/static/routes/**",
+    ".data/static/industries/**",
+    ".data/static/changes/**",
+    ".data/static/stats.json",
+  ]

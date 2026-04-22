@@ -94,9 +94,21 @@ export function getCompanyIndex(): CompanyIndex[] {
   return _companyIndex;
 }
 
+let _companyLookup: Record<string, Company> | null = null;
 export function getCompany(slug: string): Company | null {
-  if (!exists(`companies/full/${slug}.json`)) return null;
-  return readJson<Company>(`companies/full/${slug}.json`);
+  // Try individual file first (fast, works at build time with all files present)
+  if (exists(`companies/full/${slug}.json`)) {
+    return readJson<Company>(`companies/full/${slug}.json`);
+  }
+  // Fall back to lookup file (for serverless runtime where individual files aren't bundled)
+  if (!_companyLookup) {
+    try {
+      _companyLookup = readJson<Record<string, Company>>("companies/lookup.json");
+    } catch {
+      _companyLookup = {};
+    }
+  }
+  return _companyLookup[slug] || null;
 }
 
 export type TownIndexEntry = { slug: string; name: string; county: string; count: number };
@@ -106,9 +118,19 @@ export function getTownIndex(): TownIndexEntry[] {
   return _townIndex;
 }
 
+let _townLookup: Record<string, Town> | null = null;
 export function getTown(slug: string): Town | null {
-  if (!exists(`towns/${slug}.json`)) return null;
-  return readJson<Town>(`towns/${slug}.json`);
+  if (exists(`towns/${slug}.json`)) {
+    return readJson<Town>(`towns/${slug}.json`);
+  }
+  if (!_townLookup) {
+    try {
+      _townLookup = readJson<Record<string, Town>>("towns/lookup.json");
+    } catch {
+      _townLookup = {};
+    }
+  }
+  return _townLookup[slug] || null;
 }
 
 export type RouteIndexEntry = { slug: string; name: string; count: number };

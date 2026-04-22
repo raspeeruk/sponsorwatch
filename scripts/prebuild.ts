@@ -410,14 +410,22 @@ async function main() {
     );
   }
 
-  // Full per-company files (lightweight — only the ones that might be rendered
-  // at build. Rest rendered on demand by route handler reading from index.)
+  // Full per-company files (for build-time SSG rendering)
   for (const c of companies) {
     fs.writeFileSync(
       path.join(STATIC_DIR, "companies/full", `${c.slug}.json`),
       JSON.stringify(c),
     );
   }
+
+  // Single lookup file for serverless runtime (individual files aren't bundled)
+  const companyLookup: Record<string, typeof companies[0]> = {};
+  for (const c of companies) companyLookup[c.slug] = c;
+  fs.writeFileSync(
+    path.join(STATIC_DIR, "companies", "lookup.json"),
+    JSON.stringify(companyLookup),
+  );
+  console.log(`[prebuild] wrote companies/lookup.json`);
 
   // --- towns ---
   const byTown = new Map<
@@ -439,6 +447,15 @@ async function main() {
       JSON.stringify(t),
     );
   }
+  // Single lookup file for serverless runtime
+  const townLookup: Record<string, { slug: string; name: string; county: string; companies: string[] }> = {};
+  for (const t of byTown.values()) townLookup[t.slug] = t;
+  fs.writeFileSync(
+    path.join(STATIC_DIR, "towns", "lookup.json"),
+    JSON.stringify(townLookup),
+  );
+  console.log(`[prebuild] wrote towns/lookup.json`);
+
   fs.writeFileSync(
     path.join(STATIC_DIR, "towns/index.json"),
     JSON.stringify(
