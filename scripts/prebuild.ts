@@ -183,21 +183,28 @@ async function readLatestCsv(): Promise<{ date: string; csv: string }> {
     return { date: dateStamp, csv: buf };
   }
 
-  // 2. Remote fallback — use GitHub API (raw URLs don't work for LFS files)
+  // 2. Remote fallback — two-step: Contents API for download_url, then fetch actual LFS file
   const apiUrl = "https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/latest.csv";
-  console.log(`[prebuild] Fetching via GitHub API`);
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github.v3.raw",
+  console.log(`[prebuild] Fetching via GitHub API (LFS two-step)`);
+  const metaHeaders: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
     "User-Agent": "sponsorwatch-prebuild",
   };
   if (process.env.GITHUB_TOKEN) {
-    headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+    metaHeaders.Authorization = `token ${process.env.GITHUB_TOKEN}`;
   }
-  const res = await fetch(apiUrl, { headers });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch latest.csv: ${res.status} ${res.statusText}`);
+  const metaRes = await fetch(apiUrl, { headers: metaHeaders });
+  if (!metaRes.ok) {
+    throw new Error(`Failed to fetch file metadata: ${metaRes.status} ${metaRes.statusText}`);
   }
-  const csv = await res.text();
+  const meta = (await metaRes.json()) as { download_url: string; size: number };
+  console.log(`[prebuild] LFS download_url obtained (${meta.size} bytes)`);
+
+  const csvRes = await fetch(meta.download_url);
+  if (!csvRes.ok) {
+    throw new Error(`Failed to download CSV: ${csvRes.status} ${csvRes.statusText}`);
+  }
+  const csv = await csvRes.text();
   return { date: new Date().toISOString().slice(0, 10), csv };
 }
 
