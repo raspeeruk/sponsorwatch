@@ -249,10 +249,22 @@ async function readAllDiffs(): Promise<Array<{ date: string; diff: any }>> {
   const jsonFiles = listing.filter((f) => f.name.endsWith(".json")).sort((a, b) => a.name.localeCompare(b.name));
   console.log(`[prebuild] fetching ${jsonFiles.length} diffs from GitHub`);
 
+  const rawHeaders: Record<string, string> = {
+    Accept: "application/vnd.github.v3.raw",
+    "User-Agent": "sponsorwatch-prebuild",
+  };
+  if (process.env.GITHUB_TOKEN) {
+    rawHeaders.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+  }
+
   const out: Array<{ date: string; diff: any }> = [];
   for (const f of jsonFiles) {
     try {
-      const res = await fetch(f.download_url);
+      // Use API URL with raw accept header (download_url fails for private repos)
+      const res = await fetch(
+        `https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/diffs/${f.name}`,
+        { headers: rawHeaders },
+      );
       if (res.ok) {
         out.push({ date: f.name.replace(".json", ""), diff: await res.json() });
       }
