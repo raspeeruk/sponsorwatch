@@ -11,6 +11,7 @@
       "package-lock.json",
       "next.config.ts",
       "railway.json",
+      ".data-refresh/**",
       "tsconfig.json",
       "tailwind.config.ts",
       "postcss.config.mjs"

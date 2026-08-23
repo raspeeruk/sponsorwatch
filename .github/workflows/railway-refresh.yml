@@ -1,0 +1,30 @@
+name: Refresh Sponsor Watch on Railway
+
+on:
+  schedule:
+    - cron: '45 11 * * *' # after the source scraper runs at 10:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sponsorwatch-railway-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Request a Railway rebuild
+        run: |
+          mkdir -p .data-refresh
+          printf '{"requested_at":"%s"}\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > .data-refresh/last-run.json
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .data-refresh/last-run.json
+          git diff --staged --quiet || git commit -m "chore: request Railway data refresh"
+          git push
