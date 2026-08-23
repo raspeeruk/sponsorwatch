@@ -38,6 +38,7 @@ const REMOTE_BASE =
   "https://raw.githubusercontent.com/raspeeruk/certifyd-data-pipeline/main";
 
 const STATIC_DIR = path.resolve(__dirname, "..", ".data", "static");
+const PUBLIC_DIR = path.resolve(__dirname, "..", "public");
 
 type Row = {
   organisationName: string;
@@ -333,6 +334,7 @@ async function readWeeklyReports(): Promise<any[]> {
 async function main() {
   console.log("[prebuild] starting");
   fs.mkdirSync(STATIC_DIR, { recursive: true });
+  fs.mkdirSync(path.join(PUBLIC_DIR, "blog-data"), { recursive: true });
   for (const sub of [
     "companies/by-shard",
     "companies/full",
@@ -457,6 +459,10 @@ async function main() {
       };
       fs.writeFileSync(
         path.join(STATIC_DIR, "blog", `${publicReport.slug}.json`),
+        JSON.stringify(publicReport),
+      );
+      fs.writeFileSync(
+        path.join(PUBLIC_DIR, "blog-data", `${publicReport.slug}.json`),
         JSON.stringify(publicReport),
       );
       return {
@@ -653,7 +659,6 @@ async function main() {
   // --- search index (compact) ---
   // Tokens: slug, lowercase name, town. Keep small — slim fields only.
   // Written to public/ so it can be fetched directly by the client.
-  const PUBLIC_DIR = path.resolve(__dirname, "..", "public");
   fs.mkdirSync(PUBLIC_DIR, { recursive: true });
   fs.writeFileSync(
     path.join(PUBLIC_DIR, "search-index.json"),
