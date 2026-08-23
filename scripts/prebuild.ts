@@ -17,6 +17,8 @@
  *     routes/[slug].json
  *     changes/feed.json
  *     changes/[date].json
+ *     blog/index.json
+ *     blog/[slug].json
  *     industries/index.json
  *     industries/[slug].json
  *     search-index.json              # compact search blob for client
@@ -275,6 +277,57 @@ async function readAllDiffs(): Promise<Array<{ date: string; diff: any }>> {
   return out;
 }
 
+async function readWeeklyReports(): Promise<any[]> {
+  const weeklyDir = path.join(LOCAL_PIPELINE, "data", "sponsors", "weekly");
+  if (fs.existsSync(weeklyDir)) {
+    const files = fs
+      .readdirSync(weeklyDir)
+      .filter((f) => f.endsWith(".json"))
+      .sort();
+    if (files.length > 0) {
+      const out: any[] = [];
+      for (const f of files) {
+        try {
+          out.push(JSON.parse(fs.readFileSync(path.join(weeklyDir, f), "utf8")));
+        } catch {
+          console.warn(`[prebuild] skipped bad weekly report ${f}`);
+        }
+      }
+      console.log(`[prebuild] loaded ${out.length} weekly reports from local`);
+      return out;
+    }
+  }
+
+  const apiUrl = "https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/weekly";
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "sponsorwatch-prebuild",
+  };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+  const listRes = await fetch(apiUrl, { headers });
+  if (!listRes.ok) {
+    console.log(`[prebuild] No remote weekly reports (${listRes.status})`);
+    return [];
+  }
+
+  const listing = (await listRes.json()) as Array<{ name: string }>;
+  const jsonFiles = listing.filter((f) => f.name.endsWith(".json")).sort((a, b) => a.name.localeCompare(b.name));
+  const out: any[] = [];
+  for (const f of jsonFiles) {
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/weekly/${f.name}`,
+        { headers: { ...headers, Accept: "application/vnd.github.v3.raw" } },
+      );
+      if (res.ok) out.push(await res.json());
+    } catch {
+      console.warn(`[prebuild] skipped bad remote weekly report ${f.name}`);
+    }
+  }
+  console.log(`[prebuild] fetched ${out.length} weekly reports from GitHub`);
+  return out;
+}
+
 // --- main ---
 
 async function main() {
@@ -286,6 +339,7 @@ async function main() {
     "towns",
     "routes",
     "changes",
+    "blog",
     "industries",
   ]) {
     fs.mkdirSync(path.join(STATIC_DIR, sub), { recursive: true });
@@ -293,6 +347,7 @@ async function main() {
 
   const { date, csv } = await readLatestCsv();
   const diffs = await readAllDiffs();
+  const weeklyReports = await readWeeklyReports();
 
   const rows = parseCsv(csv);
   console.log(`[prebuild] parsed ${rows.length} rows`);
@@ -380,6 +435,41 @@ async function main() {
   }
 
   companies.sort((a, b) => a.name.localeCompare(b.name));
+
+  // --- weekly public reports ---
+  // Add the generated company slug where the sponsor still exists in the
+  // current register. Removed sponsors remain plain text in the report.
+  const reportEntry = (entry: any) => {
+    const key = `${(entry["Organisation Name"] || "").toLowerCase()}|${(entry["Town/City"] || "").toLowerCase()}`;
+    const company = companiesByKey.get(key);
+    return company ? { ...entry, companySlug: company.slug } : entry;
+  };
+  const blogIndex = weeklyReports
+    .sort((a, b) => String(b.week_end).localeCompare(String(a.week_end)))
+    .map((report) => {
+      const publicReport = {
+        ...report,
+        gained: (report.gained || []).map(reportEntry),
+        lost: (report.lost || []).map(reportEntry),
+        downgraded: (report.downgraded || []).map(reportEntry),
+        upgraded: (report.upgraded || []).map(reportEntry),
+        other_rating_changes: (report.other_rating_changes || []).map(reportEntry),
+      };
+      fs.writeFileSync(
+        path.join(STATIC_DIR, "blog", `${publicReport.slug}.json`),
+        JSON.stringify(publicReport),
+      );
+      return {
+        slug: publicReport.slug,
+        title: publicReport.title,
+        week_start: publicReport.week_start,
+        week_end: publicReport.week_end,
+        source_dates: publicReport.source_dates,
+        missing_dates: publicReport.missing_dates,
+        summary: publicReport.summary,
+      };
+    });
+  fs.writeFileSync(path.join(STATIC_DIR, "blog", "index.json"), JSON.stringify(blogIndex));
 
   // --- write company files ---
   console.log(`[prebuild] writing ${companies.length} company files`);

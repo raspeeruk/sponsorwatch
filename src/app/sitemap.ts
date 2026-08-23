@@ -5,6 +5,7 @@ import {
   getRouteIndex,
   getIndustryIndex,
   getChangesFeed,
+  getBlogIndex,
 } from "@/lib/data";
 
 const BASE = "https://sponsorwatch.co.uk";
@@ -17,6 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE}/routes`, lastModified: now, priority: 0.9 },
     { url: `${BASE}/towns`, lastModified: now, priority: 0.9 },
     { url: `${BASE}/contact`, lastModified: now, priority: 0.3 },
+    { url: `${BASE}/blog`, lastModified: now, priority: 0.8 },
   ];
 
   for (const c of getCompanyIndex()) {
@@ -56,6 +58,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${BASE}/changes/${d.date}`,
       lastModified: d.date,
       priority: 0.6,
+    });
+  }
+  for (const post of getBlogIndex()) {
+    entries.push({
+      url: `${BASE}/blog/${post.slug}`,
+      lastModified: post.week_end,
+      changeFrequency: "weekly",
+      priority: 0.7,
     });
   }
   return entries;

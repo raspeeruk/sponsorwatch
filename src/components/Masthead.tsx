@@ -22,6 +22,7 @@ export function Masthead() {
         </Link>
         <nav className="flex items-center gap-6 text-sm">
           <Link href="/changes">Changes</Link>
+          <Link href="/blog">Field notes</Link>
           <Link href="/routes">Routes</Link>
           <Link href="/towns">Towns</Link>
           <Link href="/contact">Contact</Link>

@@ -18,7 +18,12 @@ The web service uses the repository's `railway.json`. It builds with
 
 The refresh workflow runs at 11:45 UTC, after the source scraper's 10:30 UTC
 run. The marker commit triggers a fresh source build, so `scripts/prebuild.ts`
-runs again and pulls the newest private CSV and diff history.
+runs again and pulls the newest private CSV, diff history and weekly reports.
+
+The private pipeline also runs `Publish weekly SponsorWatch report` at 11:15
+UTC on Sundays. It writes one idempotent, source-dated report under
+`data/sponsors/weekly/`. The next Railway refresh publishes that report at
+`/blog` without exposing the source CSV or requiring a second web service.
 
 ## Variables
 

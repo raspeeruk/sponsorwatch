@@ -86,6 +86,48 @@ export type ChangesFeedItem = {
   changed: number;
 };
 
+export type BlogIndexItem = {
+  slug: string;
+  title: string;
+  week_start: string;
+  week_end: string;
+  source_dates: string[];
+  missing_dates: string[];
+  summary: {
+    total_before: number;
+    total_after: number;
+    gained: number;
+    lost: number;
+    downgraded: number;
+    upgraded: number;
+    other_rating_changes: number;
+    field_updates: number;
+  };
+};
+
+export type BlogEntry = {
+  "Organisation Name": string;
+  "Town/City": string;
+  Route: string;
+  date: string;
+  companySlug?: string;
+  column?: string;
+  from?: string;
+  to?: string;
+  from_rating?: string | null;
+  to_rating?: string | null;
+};
+
+export type BlogReport = BlogIndexItem & {
+  version: number;
+  gained: BlogEntry[];
+  lost: BlogEntry[];
+  downgraded: BlogEntry[];
+  upgraded: BlogEntry[];
+  other_rating_changes: BlogEntry[];
+  field_update_counts: Record<string, number>;
+};
+
 // --- loaders ---
 
 let _companyIndex: CompanyIndex[] | null = null;
@@ -169,6 +211,16 @@ export function getChangesFeed(): ChangesFeedItem[] {
 export function getChangesForDate(date: string) {
   if (!exists(`changes/${date}.json`)) return null;
   return readJson(`changes/${date}.json`);
+}
+
+export function getBlogIndex(): BlogIndexItem[] {
+  if (!exists("blog/index.json")) return [];
+  return readJson<BlogIndexItem[]>("blog/index.json");
+}
+
+export function getBlogPost(slug: string): BlogReport | null {
+  if (!exists(`blog/${slug}.json`)) return null;
+  return readJson<BlogReport>(`blog/${slug}.json`);
 }
 
 // --- helpers ---

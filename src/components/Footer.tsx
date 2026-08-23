@@ -19,6 +19,7 @@ export function Footer() {
           <p className="data-label mb-3">Index</p>
           <ul className="space-y-1">
             <li><Link href="/changes">Daily changes</Link></li>
+            <li><Link href="/blog">Weekly field notes</Link></li>
             <li><Link href="/routes">By visa route</Link></li>
             <li><Link href="/towns">By town</Link></li>
             <li><Link href="/for/healthcare">By industry</Link></li>
