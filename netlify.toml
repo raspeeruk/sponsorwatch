@@ -1,18 +1,4 @@
+# Sponsor Watch has moved to Railway. Keep this guard in place until the old
+# Netlify site is disconnected so Git pushes do not start another build.
 [build]
-  command = "npm run build"
-  publish = ".next"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
-[functions]
-  included_files = [
-    ".data/static/companies/lookup.json",
-    ".data/static/companies/index.json",
-    ".data/static/towns/lookup.json",
-    ".data/static/towns/index.json",
-    ".data/static/routes/**",
-    ".data/static/industries/**",
-    ".data/static/changes/**",
-    ".data/static/stats.json",
-  ]
+  ignore = "exit 0"

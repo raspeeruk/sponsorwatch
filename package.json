@@ -5,12 +5,11 @@
   "scripts": {
     "prebuild": "tsx scripts/prebuild.ts",
     "dev": "next dev",
-    "build": "npm run prebuild && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
-    "@netlify/plugin-nextjs": "^5.15.9",
     "next": "^16.2.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
