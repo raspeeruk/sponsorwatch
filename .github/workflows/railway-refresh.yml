@@ -22,6 +22,7 @@ jobs:
       - name: Request a Railway rebuild
         run: |
           mkdir -p .data-refresh
+          mkdir -p public
           requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           printf '{"requested_at":"%s"}\n' "$requested_at" > .data-refresh/last-run.json
           printf 'Railway refresh requested at %s\n' "$requested_at" > public/railway-refresh.txt
