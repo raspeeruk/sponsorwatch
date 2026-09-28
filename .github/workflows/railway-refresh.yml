@@ -1,8 +1,7 @@
+# Paused 28 Sep 2026 — site down / Railway bill; re-enable only if Sponsor Watch is deliberately brought back.
 name: Refresh Sponsor Watch on Railway
 
 on:
-  schedule:
-    - cron: '45 11 * * *' # after the source scraper runs at 10:30 UTC
   workflow_dispatch:
 
 permissions:
