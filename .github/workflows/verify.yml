@@ -1,0 +1,26 @@
+name: Verify retained public files
+
+on:
+  push:
+    branches: [main, 'cost/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx tsx scripts/verify-export.ts
+      - run: npm test
+      - run: npm run lint
+      - run: npm audit --omit=dev

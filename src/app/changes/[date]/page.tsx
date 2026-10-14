@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/StaticLink";
 import type { Metadata } from "next";
 import { getChangesForDate, getChangesFeed } from "@/lib/data";
 

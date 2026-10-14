@@ -1,5 +1,6 @@
-# Paused 28 Sep 2026 — site down / Railway bill; re-enable only if Sponsor Watch is deliberately brought back.
-name: Refresh Sponsor Watch on Railway
+# Daily automation remains paused since 28 September because of hosting costs.
+# When explicitly restored, schedule this after the source scraper at 10:30 UTC.
+name: Validate and retain Sponsor Watch public data
 
 on:
   workflow_dispatch:
@@ -9,7 +10,7 @@ permissions:
 
 concurrency:
   group: sponsorwatch-railway-refresh
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   refresh:
@@ -17,16 +18,49 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
 
-      - name: Request a Railway rebuild
+      - name: Check existing source access
+        env:
+          SOURCE_TOKEN: ${{ secrets.SPONSORS_DATA_TOKEN }}
+        run: test -n "$SOURCE_TOKEN" || { echo "Missing existing pipeline read token; retain the last good public snapshot."; exit 1; }
+
+      - uses: actions/checkout@v4
+        with:
+          repository: raspeeruk/certifyd-data-pipeline
+          path: .source
+          token: ${{ secrets.SPONSORS_DATA_TOKEN }}
+          sparse-checkout: data/sponsors
+          lfs: false
+
+      - name: Fetch only the current completed CSV
+        working-directory: .source
         run: |
-          mkdir -p .data-refresh
-          mkdir -p public
-          requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          printf '{"requested_at":"%s"}\n' "$requested_at" > .data-refresh/last-run.json
-          printf 'Railway refresh requested at %s\n' "$requested_at" > public/railway-refresh.txt
+          latest="$(find data/sponsors -maxdepth 1 -name '????-??-??.csv' | sort | tail -1)"
+          git lfs pull --include="data/sponsors/latest.csv,$latest"
+
+      - name: Validate the daily source and retain material changes
+        id: source
+        env:
+          SPONSORS_DATA_PATH: ${{ github.workspace }}/.source
+        run: npm run data:refresh
+
+      - name: Verify the complete static website before publishing
+        if: steps.source.outputs.changed == 'true'
+        run: |
+          npm run build
+          npx tsx scripts/verify-export.ts
+          npm test
+
+      - name: Publish changed public files
+        if: steps.source.outputs.changed == 'true'
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .data-refresh/last-run.json public/railway-refresh.txt
-          git diff --staged --quiet || git commit -m "chore: request Railway data refresh [skip netlify]"
+          git add data/source.snapshot.json.gz
+          git diff --staged --quiet || git commit -m "data: publish validated sponsor register [skip netlify]"
           git push

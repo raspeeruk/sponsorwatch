@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/StaticLink";
 
 export const metadata: Metadata = {
   title: "Contact SponsorWatch",

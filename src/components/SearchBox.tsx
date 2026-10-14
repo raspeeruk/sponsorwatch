@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/StaticLink";
 
 type Hit = { s: string; n: string; t: string };
 
@@ -55,7 +55,7 @@ export function SearchBox() {
         <div className="mt-2 border border-ink bg-paper">
           {loading && <p className="px-3 py-2 data-label">Loading…</p>}
           {!loading && hits.length === 0 && (
-            <p className="px-3 py-2 data-label">No matches in the top 20,000 sponsors.</p>
+            <p className="px-3 py-2 data-label">No matching sponsors.</p>
           )}
           {hits.map((h) => (
             <Link

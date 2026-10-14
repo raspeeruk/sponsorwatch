@@ -199,8 +199,9 @@ export function getIndustry(slug: string): Industry | null {
   return readJson<Industry>(`industries/${slug}.json`);
 }
 
+let _stats: Stats | null = null;
 export function getStats(): Stats {
-  return readJson<Stats>("stats.json");
+  return _stats ??= readJson<Stats>("stats.json");
 }
 
 export function getChangesFeed(): ChangesFeedItem[] {
@@ -223,13 +224,17 @@ export function getBlogPost(slug: string): BlogReport | null {
   return readJson<BlogReport>(`blog/${slug}.json`);
 }
 
+let _companyMap: Map<string, CompanyIndex> | null = null;
+function companyMap() {
+  return _companyMap ??= new Map(getCompanyIndex().map(c => [c.slug, c]));
+}
+
 // --- helpers ---
 
 export function getCompaniesByTown(slug: string, limit = 500): CompanyIndex[] {
   const town = getTown(slug);
   if (!town) return [];
-  const idx = getCompanyIndex();
-  const map = new Map(idx.map((c) => [c.slug, c]));
+  const map = companyMap();
   return town.companies
     .map((s) => map.get(s))
     .filter((c): c is CompanyIndex => Boolean(c))
@@ -239,8 +244,7 @@ export function getCompaniesByTown(slug: string, limit = 500): CompanyIndex[] {
 export function getCompaniesByRoute(slug: string, limit = 500): CompanyIndex[] {
   const route = getRoute(slug);
   if (!route) return [];
-  const idx = getCompanyIndex();
-  const map = new Map(idx.map((c) => [c.slug, c]));
+  const map = companyMap();
   return route.companies
     .map((s) => map.get(s))
     .filter((c): c is CompanyIndex => Boolean(c))
@@ -250,8 +254,7 @@ export function getCompaniesByRoute(slug: string, limit = 500): CompanyIndex[] {
 export function getCompaniesByIndustry(slug: string, limit = 500): CompanyIndex[] {
   const ind = getIndustry(slug);
   if (!ind) return [];
-  const idx = getCompanyIndex();
-  const map = new Map(idx.map((c) => [c.slug, c]));
+  const map = companyMap();
   return ind.companies
     .map((s) => map.get(s))
     .filter((c): c is CompanyIndex => Boolean(c))
