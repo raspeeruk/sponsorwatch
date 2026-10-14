@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/StaticLink";
 import { getStats } from "@/lib/data";
 
 export function Masthead() {

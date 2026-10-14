@@ -1,14 +1,13 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/StaticLink";
 import type { Metadata } from "next";
 import { getTown, getTownIndex, getCompaniesByTown, getStats } from "@/lib/data";
 
 export async function generateStaticParams() {
-  return getTownIndex().slice(0, 2000).map((t) => ({ slug: t.slug }));
+  return getTownIndex().slice(0, 1).map((t) => ({ slug: t.slug }));
 }
 
-export const revalidate = 86400;
-export const dynamicParams = true;
+export const dynamicParams = false;
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> },

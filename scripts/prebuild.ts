@@ -27,16 +27,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { readSnapshot } from "./snapshot";
 
-// Data source: the certifyd-data-pipeline repo. Prefer local checkout (faster,
-// works offline). Fall back to fetching raw GitHub for CI builds.
-const LOCAL_PIPELINE =
-  process.env.SPONSORS_DATA_PATH ||
-  "/Users/andrewspeer/Documents/GitHub/certifyd-data-pipeline";
-const REMOTE_BASE =
-  process.env.SPONSORS_REMOTE_BASE ||
-  "https://raw.githubusercontent.com/raspeeruk/certifyd-data-pipeline/main";
-
+// Website builds are offline. The daily ingest validates and retains the source.
 const STATIC_DIR = path.resolve(__dirname, "..", ".data", "static");
 const PUBLIC_DIR = path.resolve(__dirname, "..", "public");
 
@@ -164,175 +157,12 @@ function parseCsv(contents: string): Row[] {
   return rows;
 }
 
-// --- data fetching ---
-
-async function readLatestCsv(): Promise<{ date: string; csv: string }> {
-  // 1. Local repo (preferred)
-  const localCsv = path.join(LOCAL_PIPELINE, "data", "sponsors", "latest.csv");
-  if (fs.existsSync(localCsv)) {
-    const buf = fs.readFileSync(localCsv, "utf8");
-    // Try to find dated snapshot to stamp build
-    const sponsorsDir = path.join(LOCAL_PIPELINE, "data", "sponsors");
-    let dateStamp = new Date().toISOString().slice(0, 10);
-    if (fs.existsSync(sponsorsDir)) {
-      const dated = fs
-        .readdirSync(sponsorsDir)
-        .filter((f) => /^\d{4}-\d{2}-\d{2}\.csv$/.test(f))
-        .sort()
-        .pop();
-      if (dated) dateStamp = dated.replace(".csv", "");
-    }
-    console.log(`[prebuild] Loaded ${localCsv} (${buf.length} bytes)`);
-    return { date: dateStamp, csv: buf };
-  }
-
-  // 2. Remote fallback — two-step: Contents API for download_url, then fetch actual LFS file
-  const apiUrl = "https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/latest.csv";
-  console.log(`[prebuild] Fetching via GitHub API (LFS two-step)`);
-  const metaHeaders: Record<string, string> = {
-    Accept: "application/vnd.github.v3+json",
-    "User-Agent": "sponsorwatch-prebuild",
-  };
-  if (process.env.GITHUB_TOKEN) {
-    metaHeaders.Authorization = `token ${process.env.GITHUB_TOKEN}`;
-  }
-  const metaRes = await fetch(apiUrl, { headers: metaHeaders });
-  if (!metaRes.ok) {
-    throw new Error(`Failed to fetch file metadata: ${metaRes.status} ${metaRes.statusText}`);
-  }
-  const meta = (await metaRes.json()) as { download_url: string; size: number };
-  console.log(`[prebuild] LFS download_url obtained (${meta.size} bytes)`);
-
-  const csvRes = await fetch(meta.download_url);
-  if (!csvRes.ok) {
-    throw new Error(`Failed to download CSV: ${csvRes.status} ${csvRes.statusText}`);
-  }
-  const csv = await csvRes.text();
-  return { date: new Date().toISOString().slice(0, 10), csv };
-}
-
-async function readAllDiffs(): Promise<Array<{ date: string; diff: any }>> {
-  // 1. Try local filesystem
-  const diffsDir = path.join(LOCAL_PIPELINE, "data", "sponsors", "diffs");
-  if (fs.existsSync(diffsDir)) {
-    const files = fs
-      .readdirSync(diffsDir)
-      .filter((f) => f.endsWith(".json"))
-      .sort();
-    if (files.length > 0) {
-      const out: Array<{ date: string; diff: any }> = [];
-      for (const f of files) {
-        const raw = fs.readFileSync(path.join(diffsDir, f), "utf8");
-        try {
-          out.push({ date: f.replace(".json", ""), diff: JSON.parse(raw) });
-        } catch {
-          console.warn(`[prebuild] skipped bad diff ${f}`);
-        }
-      }
-      console.log(`[prebuild] loaded ${out.length} diffs from local`);
-      return out;
-    }
-  }
-
-  // 2. Remote fallback — fetch diff listing from GitHub API
-  const apiUrl = "https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/diffs";
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github.v3+json",
-    "User-Agent": "sponsorwatch-prebuild",
-  };
-  if (process.env.GITHUB_TOKEN) {
-    headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
-  }
-  const listRes = await fetch(apiUrl, { headers });
-  if (!listRes.ok) {
-    console.log(`[prebuild] No remote diffs (${listRes.status}) — skipping change history`);
-    return [];
-  }
-  const listing = (await listRes.json()) as Array<{ name: string; download_url: string }>;
-  const jsonFiles = listing.filter((f) => f.name.endsWith(".json")).sort((a, b) => a.name.localeCompare(b.name));
-  console.log(`[prebuild] fetching ${jsonFiles.length} diffs from GitHub`);
-
-  const rawHeaders: Record<string, string> = {
-    Accept: "application/vnd.github.v3.raw",
-    "User-Agent": "sponsorwatch-prebuild",
-  };
-  if (process.env.GITHUB_TOKEN) {
-    rawHeaders.Authorization = `token ${process.env.GITHUB_TOKEN}`;
-  }
-
-  const out: Array<{ date: string; diff: any }> = [];
-  for (const f of jsonFiles) {
-    try {
-      // Use API URL with raw accept header (download_url fails for private repos)
-      const res = await fetch(
-        `https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/diffs/${f.name}`,
-        { headers: rawHeaders },
-      );
-      if (res.ok) {
-        out.push({ date: f.name.replace(".json", ""), diff: await res.json() });
-      }
-    } catch {
-      console.warn(`[prebuild] skipped bad remote diff ${f.name}`);
-    }
-  }
-  return out;
-}
-
-async function readWeeklyReports(): Promise<any[]> {
-  const weeklyDir = path.join(LOCAL_PIPELINE, "data", "sponsors", "weekly");
-  if (fs.existsSync(weeklyDir)) {
-    const files = fs
-      .readdirSync(weeklyDir)
-      .filter((f) => f.endsWith(".json"))
-      .sort();
-    if (files.length > 0) {
-      const out: any[] = [];
-      for (const f of files) {
-        try {
-          out.push(JSON.parse(fs.readFileSync(path.join(weeklyDir, f), "utf8")));
-        } catch {
-          console.warn(`[prebuild] skipped bad weekly report ${f}`);
-        }
-      }
-      console.log(`[prebuild] loaded ${out.length} weekly reports from local`);
-      return out;
-    }
-  }
-
-  const apiUrl = "https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/weekly";
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github.v3+json",
-    "User-Agent": "sponsorwatch-prebuild",
-  };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
-  const listRes = await fetch(apiUrl, { headers });
-  if (!listRes.ok) {
-    console.log(`[prebuild] No remote weekly reports (${listRes.status})`);
-    return [];
-  }
-
-  const listing = (await listRes.json()) as Array<{ name: string }>;
-  const jsonFiles = listing.filter((f) => f.name.endsWith(".json")).sort((a, b) => a.name.localeCompare(b.name));
-  const out: any[] = [];
-  for (const f of jsonFiles) {
-    try {
-      const res = await fetch(
-        `https://api.github.com/repos/raspeeruk/certifyd-data-pipeline/contents/data/sponsors/weekly/${f.name}`,
-        { headers: { ...headers, Accept: "application/vnd.github.v3.raw" } },
-      );
-      if (res.ok) out.push(await res.json());
-    } catch {
-      console.warn(`[prebuild] skipped bad remote weekly report ${f.name}`);
-    }
-  }
-  console.log(`[prebuild] fetched ${out.length} weekly reports from GitHub`);
-  return out;
-}
-
 // --- main ---
 
 async function main() {
   console.log("[prebuild] starting");
+  readSnapshot(); // fail before touching generated files if the retained input is invalid
+  fs.rmSync(STATIC_DIR, { recursive: true, force: true });
   fs.mkdirSync(STATIC_DIR, { recursive: true });
   fs.mkdirSync(path.join(PUBLIC_DIR, "blog-data"), { recursive: true });
   for (const sub of [
@@ -347,9 +177,8 @@ async function main() {
     fs.mkdirSync(path.join(STATIC_DIR, sub), { recursive: true });
   }
 
-  const { date, csv } = await readLatestCsv();
-  const diffs = await readAllDiffs();
-  const weeklyReports = await readWeeklyReports();
+  const snapshot = readSnapshot();
+  const { sourceDate: date, csv, diffs, weeklyReports } = snapshot;
 
   const rows = parseCsv(csv);
   console.log(`[prebuild] parsed ${rows.length} rows`);
@@ -478,7 +307,7 @@ async function main() {
   fs.writeFileSync(path.join(STATIC_DIR, "blog", "index.json"), JSON.stringify(blogIndex));
 
   // --- write company files ---
-  console.log(`[prebuild] writing ${companies.length} company files`);
+  console.log(`[prebuild] writing public lookup for ${companies.length} companies`);
   const indexSlim = companies.map((c) => ({
     slug: c.slug,
     name: c.name,
@@ -506,14 +335,6 @@ async function main() {
     );
   }
 
-  // Full per-company files (for build-time SSG rendering)
-  for (const c of companies) {
-    fs.writeFileSync(
-      path.join(STATIC_DIR, "companies/full", `${c.slug}.json`),
-      JSON.stringify(c),
-    );
-  }
-
   // Single lookup file for serverless runtime (individual files aren't bundled)
   const companyLookup: Record<string, typeof companies[0]> = {};
   for (const c of companies) companyLookup[c.slug] = c;
@@ -536,12 +357,6 @@ async function main() {
       byTown.set(c.townSlug, t);
     }
     t.companies.push(c.slug);
-  }
-  for (const t of byTown.values()) {
-    fs.writeFileSync(
-      path.join(STATIC_DIR, "towns", `${t.slug}.json`),
-      JSON.stringify(t),
-    );
   }
   // Single lookup file for serverless runtime
   const townLookup: Record<string, { slug: string; name: string; county: string; companies: string[] }> = {};
@@ -663,7 +478,7 @@ async function main() {
   fs.writeFileSync(
     path.join(PUBLIC_DIR, "search-index.json"),
     JSON.stringify(
-      companies.slice(0, 20000).map((c) => ({
+      companies.map((c) => ({
         s: c.slug,
         n: c.name,
         t: c.town,
@@ -701,7 +516,7 @@ async function main() {
   fs.writeFileSync(
     path.join(STATIC_DIR, "build-manifest.json"),
     JSON.stringify(
-      { builtAt: new Date().toISOString(), csvDate: date, companies: companies.length },
+      { sourceCommit: snapshot.sourceCommit, materialHash: snapshot.materialHash, csvDate: date, companies: companies.length },
       null,
       2,
     ),

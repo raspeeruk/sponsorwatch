@@ -6,12 +6,14 @@ import {
   getIndustryIndex,
   getChangesFeed,
   getBlogIndex,
+  getStats,
 } from "@/lib/data";
 
 const BASE = "https://sponsorwatch.co.uk";
+export const dynamic = "force-static";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
+  const now = new Date(`${getStats().asOf}T00:00:00Z`);
   const entries: MetadataRoute.Sitemap = [
     { url: `${BASE}/`, lastModified: now, priority: 1.0 },
     { url: `${BASE}/changes`, lastModified: now, priority: 0.9 },

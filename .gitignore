@@ -5,9 +5,12 @@ out/
 .env
 .env.local
 .data/
+.source/
 public/search-index.json
+public/blog-data/
 *.log
 
 # Local Netlify folder
 .netlify
 tsconfig.tsbuildinfo
+data/*.tmp

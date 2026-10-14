@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/StaticLink";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getBlogIndex, getBlogPost, type BlogEntry } from "@/lib/data";
